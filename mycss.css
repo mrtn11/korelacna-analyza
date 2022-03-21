@@ -1,0 +1,42 @@
+.container{
+  max-width: 500px;
+  margin: auto;
+  text-align: center;
+}
+
+.objekty {
+  display: inline-block;
+  width: 200px;
+  height: 250px;
+  max-width: 200px;
+  margin: auto;
+
+}
+.graf {
+  max-width: 700px;
+  margin: auto;
+}
+
+.button1{
+  border: none;
+  border-radius: 5px;
+  margin: 10px 2px;
+  padding: 10px 40px;
+  outline: none;
+  transition: 0.3s;
+}
+.button1:hover {
+  background-color: #0070EE;
+  opacity: 1;
+  transition: 0.5s;
+  color: white;
+}
+
+
+textarea{
+  font-family:"Times New Roman", Times, serif;
+   font-size: 18px;
+   border-radius: 8px;
+   resize: none;
+
+}

@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<head>
+<link rel="stylesheet" href="mycss.css">
+</head>
+<html>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jstat@latest/dist/jstat.min.js"></script>
+<body>
+
+<div class="container">
+  <div class="objekty">
+
+        <p id="nadpis1">Premenná X:</p>
+         <textarea id="cislo1" rows="10" cols="15" name="cislo1"></textarea>
+  </div>
+  <div class="objekty">
+         <p id="nadpis2">Premenná Y:</p>
+         <textarea id="cislo2" rows="10" cols="15" name="cislo2"></textarea>
+  </div>
+  <br>
+
+  <form id="myForm">
+    <input type="file" id="csvFile" accept=".csv" />
+    <br/>
+    <input type="submit" value="Submit" />
+
+  <br>
+  <br>
+    <label for="koeficient">Koeficient:</label>
+      <select name="koeficient" id="koeficient">
+        <option value="pearson">Pearson</option>
+        <option value="spearman">Spearman</option>
+        <option value="kendall">Kendall</option>
+      </select><br>
+    <button type="button" onclick="myFunction()" name="button" class="button1">ENTER</button><br>
+    <div id="klikRanky"><br><br></div>
+    <p id="result"></p>
+    <p id="result2"></p>
+    <p id="result3"></p>
+    </form>
+
+
+</div>
+
+<div class="graf">
+<canvas id="myChart" style="width:100%;max-width:700px"></canvas>
+</div>
+
+<div class="container" id="ranky">
+</div>
+<p id="zobrazitRanky"></p>
+<script>
+const myForm = document.getElementById("myForm");
+const csvFile = document.getElementById("csvFile");
+var poleIntov1;
+var poleIntov2;
+var n;
+var result = [];
+var result2 = [];
+
+
+function csvToArray(str, delimiter = ";") {
+
+  const headers = str.slice(0, str.indexOf("\n")).split(delimiter);
+  const rows = str.slice(str.indexOf("\n") + 1).split("\n");
+  var vyslednePole1 = [];
+  var vyslednePole2 = [];
+
+
+  var stringHlavicky = String(headers);
+  var poleHlaviciek = stringHlavicky.split(",");
+
+  document.getElementById("nadpis1").innerHTML= poleHlaviciek[0];
+  document.getElementById("nadpis2").innerHTML= poleHlaviciek[1];
+
+
+  for (var i = 0; i < rows.length-1; i++) {
+    var stringRiadku = String(rows[i]);
+    var poleRiadkov = stringRiadku.split(";");
+    vyslednePole1.push(poleRiadkov[0]);
+    vyslednePole2.push(poleRiadkov[1]);
+  }
+
+  var textarea = document.getElementById("cislo1");
+  textarea.value = vyslednePole1.join("\n");
+  var textarea2 = document.getElementById("cislo2");
+  textarea2.value = vyslednePole2.join("\n");
+
+
+}
+
+myForm.addEventListener("submit", function (e) {
+  e.preventDefault();
+  const input = csvFile.files[0];
+  const reader = new FileReader();
+
+  reader.onload = function (e) {
+    const text = e.target.result;
+    const data = csvToArray(text);
+  //  document.getElementById("result").innerHTML=(JSON.stringify(data));
+  };
+
+  reader.readAsText(input);
+});
+
+
+function myFunction() {
+  var stringX = document.getElementById("cislo1").value;
+  var stringY = document.getElementById("cislo2").value;
+
+  var poleStringovX = stringX.split(/\n| /);
+  var poleStringovY = stringY.split(/\n| /);
+
+  var tHodnota = 0.0;
+  var pHodnota = 0.0;
+
+  var storage = [];
+
+ if(document.getElementById('button2')!=undefined){
+  var elem = document.getElementById('button2');
+  elem.parentNode.removeChild(elem);
+  document.getElementById("klikRanky").innerHTML = "<br><br>"}
+
+  if(document.getElementById('cislo3')!=undefined){
+    for (var i = 3; i < 7; i++) {
+      var elem = document.getElementById('cislo'+i);
+      elem.parentNode.removeChild(elem);
+    }
+  }
+
+
+  poleStringovX = poleStringovX.filter(e => e !== "");
+  poleStringovX = poleStringovX.filter(Number);
+  poleStringovY = poleStringovY.filter(e => e !== "");
+  poleStringovY = poleStringovY.filter(Number);
+
+  poleIntov1 = poleStringovX.map(Number);
+  poleIntov2 = poleStringovY.map(Number);
+
+  var textarea1 = document.getElementById("cislo1");
+  textarea1.value = poleStringovX.join("\n");
+
+  var textarea2 = document.getElementById("cislo2");
+  textarea2.value = poleStringovY.join("\n");
+
+  n = poleIntov1.length;
+
+  for (var i = 0; i < n; i++) {
+    var x = poleIntov1[i];
+    var y = poleIntov2[i];
+    var json = {x: x, y: y};
+    storage.push(json); //naplnenie dat v pozadovanej forme grafu do bodov
+  }
+
+  if (poleIntov1.length != poleIntov2.length) {
+    alert("Premenné sú rôzne dlhe");
+  }
+  else if (poleIntov1.length==1 | poleIntov2.length==2 ) {
+    alert("Pole premennej obsahuje málo parametrov");
+  }
+  else {
+    var ddl = document.getElementById("koeficient");
+    var selectedValue = ddl.options[ddl.selectedIndex].value; //zistenie ktory koeficient je vybraty
+
+    if (selectedValue == "pearson"){
+    pearson();
+   }
+   if (selectedValue == "spearman"){
+    spearman();
+   }
+   if (selectedValue == "kendall"){
+    kendall();
+   }
+  }
+
+function pearson(){
+  let sx = 0.0;
+  let sy = 0.0;
+  let sxx = 0.0;
+  let syy = 0.0;
+  let sxy = 0.0;
+
+  for (var i = 0; i < n; i++) {
+    var x = poleIntov1[i];
+    var y = poleIntov2[i];
+
+    sx += x;
+    sy += y;
+    sxx += x * x;
+    syy += y * y;
+    sxy += x * y;
+  }
+
+  let cov = sxy / n - sx * sy / n / n;
+  let sigmax = Math.sqrt(sxx / n -  sx * sx / n / n);
+  let sigmay = Math.sqrt(syy / n -  sy * sy / n / n);
+  let korelacia = cov / sigmax / sigmay;
+
+  document.getElementById("result").innerHTML="Pearsonov koeficient korelácie: " + korelacia.toFixed(4);
+
+  tHodnota = (korelacia * Math.sqrt(n-2))/Math.sqrt(1-(korelacia*korelacia));
+  document.getElementById("result2").innerHTML="t-hodnota: " + tHodnota.toFixed(4);
+  pValue();
+
+  myGraph();
+  }
+
+
+  function spearman(){
+  var result3 = [];
+  var result4 = [];
+  var suma = 0;
+  var spearmankoef = 0.0;
+
+  result=[];
+  result2=[];
+  rankify(poleIntov1,n,result);
+  rankify(poleIntov2,n,result2);
+
+
+  result3 = result.map((a, i) => a - result2[i]);
+  result4 = result3.map((a, i) => a * result3[i]);
+  for (let i = 0; i < n; i++) {
+     suma += result4[i];
+  }
+  spearmankoef=1-((6*suma)/(n*n*n - n));
+  document.getElementById("result").innerHTML="Spearmanov koeficient korelácie: " + spearmankoef.toFixed(8);
+  tHodnota = (spearmankoef * Math.sqrt(n-2))/Math.sqrt(1-(spearmankoef*spearmankoef));
+  document.getElementById("result2").innerHTML="t-hodnota: " + tHodnota.toFixed(4);
+
+  document.getElementById("klikRanky").innerHTML =
+   "<button type='button' onclick='zobrazRanky()' name='button' id='button2' class='button2'>Ranky</button><br>";
+
+  pValue();
+  myGraph();
+  }
+
+  function kendall(){
+    var orankovaneX = poleIntov1;
+    var orankovaneY = poleIntov2;
+  //  rankify(poleIntov1,n,orankovaneX);
+  //  rankify(poleIntov2,n,orankovaneY);
+    var x = 1;
+    var c = 0.0; //concordant
+    var d = 0.0; //discordant
+    var tieXY = 0.0;
+    var tieX = 0.0;
+    var tieY = 0.0;
+    var pocet = 0;
+    var kendallovKoef = 0.0;
+    for (var i = 0; i < orankovaneX.length-1; i++) {
+      for (var j = x; j < orankovaneX.length; j++) {
+        if(orankovaneX[j]==orankovaneX[i] & orankovaneY[j]==orankovaneY[i]){
+          tieXY++;
+          tieX++;
+          tieY++;
+        }
+        else if (orankovaneX[j]==orankovaneX[i]) {
+          tieX++;
+        }
+        else if (orankovaneY[j]==orankovaneY[i]) {
+          tieY++;
+        }
+        else if (orankovaneX[j]>orankovaneX[i] & orankovaneY[j]>orankovaneY[i]) {
+          c++;
+        }
+        else if (orankovaneX[j]<orankovaneX[i] & orankovaneY[j]<orankovaneY[i]) {
+          c++;
+        }
+        else {
+          d++;
+        }
+        pocet++;
+      }
+      x++;
+    }
+
+    kendallovKoef = (c-d)/Math.sqrt((pocet-tieX)*(pocet-tieY));
+    document.getElementById("result").innerHTML="Kendallov koeficient korelácie: " + kendallovKoef.toFixed(4);
+    tHodnota = (kendallovKoef * Math.sqrt(n-2))/Math.sqrt(1-(kendallovKoef*kendallovKoef));
+    document.getElementById("result2").innerHTML="t-hodnota: " + tHodnota.toFixed(4);
+
+    myGraph();
+    pValue();
+
+
+  }
+
+  function pValue(){
+    var lefttail = jStat.studentt.cdf(tHodnota, n-2);
+    var righttail = 1-(jStat.studentt.cdf(tHodnota, n-2));
+    var phodnota = (2*Math.min(lefttail,righttail));
+    document.getElementById("result3").innerHTML="p-hodnota: " + phodnota.toFixed(7);
+  }
+
+  function myGraph() {
+  //var ctxLine = document.getElementById("myChart").getContext("2d");
+  if(window.bar != undefined)
+  window.bar.destroy();
+  window.bar = new Chart("myChart", {
+    type: "scatter",
+    data: {
+      datasets: [{
+        pointRadius: 4,
+        pointBackgroundColor: "rgb(0,112,238)",
+        data: storage
+      }]
+    },
+    options: {
+      legend: {display: false},
+      scales: {
+        xAxes: [{ticks: {min: Math.min.apply(Math, poleIntov1), max:Math.max.apply(Math, poleIntov1)}}],
+        yAxes: [{ticks: {min: Math.min.apply(Math, poleIntov2), max:Math.max.apply(Math, poleIntov2)}}],
+        grace: 100
+      }
+    }
+  });
+  }
+
+  function rankify(A, n, resultRank) {
+        var R = [...Array(n)];
+        for (var i = 0; i < n; i++) {
+          var r = 1,
+            s = 1;
+          for (var j = 0; j < n; j++) {
+            if (j != i && A[j] < A[i]) r += 1;
+
+            if (j != i && A[j] == A[i]) s += 1;
+          }
+          R[i] = parseFloat(r + parseFloat(s - 1) / parseFloat(2));
+        }
+        for (var i = 0; i < n; i++)
+          resultRank[i] = (parseFloat(R[i]).toFixed(1));
+      }
+}
+
+function zobrazRanky(){
+
+
+
+var div = document.getElementById("ranky");
+if(document.getElementById('cislo3')==undefined){
+  for (var i = 3; i < 7; i++) {
+    var input = document.createElement("textarea");
+    input.name = "post";
+    input.id = "cislo" + i;
+    input.cols = "8";
+    input.rows = ""+n;
+    div.appendChild(input); //appendChild
+  }
+}
+
+document.getElementById('zobrazitRanky').scrollIntoView({
+behavior: 'smooth'
+});
+      var textarea3 = document.getElementById("cislo3");
+      textarea3.value = poleIntov1.join("\n");
+      let textarea4 = document.getElementById("cislo4");
+      textarea4.value = result.join("\n");
+      let textarea5 = document.getElementById("cislo5");
+      textarea5.value = poleIntov2.join("\n");
+      let textarea6 = document.getElementById("cislo6");
+      textarea6.value = result2.join("\n");
+
+}
+</script>
+
+</body>
+</html>
